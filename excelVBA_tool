@@ -1,6 +1,6 @@
 
 '/*
-'■開始■
+'開始
 '*/
 
 Function macroStart()
@@ -18,7 +18,7 @@ End Function _
 
 
 '/*
-'■終了■
+'終了
 '*/
 
 Function macroEnd()
@@ -62,7 +62,7 @@ End Function _
 
 
 '/*
-'■ファイルの存在確認■
+'ファイルの存在確認
 '
 '   @param  fileName(参照ファイル名)
 '
@@ -94,7 +94,7 @@ End Function _
 
 
 '/*
-'■このbookの最後に指定した名称でシートを追加■
+'このbookの最後に指定した名称でシートを追加
 '   ※同名のシートが存在する場合は先に削除'
 '
 '   @param  [String]指定するシート名
@@ -138,7 +138,7 @@ End Function _
 
 
 '/*
-'■対象Bookが開いているか確認■
+'対象Bookが開いているか確認
 '
 '   @param  [String]対象ファイルのパス
 '
@@ -166,7 +166,7 @@ End Function _
 
 
 '/*
-'■選択したブックのパスを取得する■
+'選択したブックのパスを取得する
 '
 '   @param  [String]選択させるファイルの種類
 '
@@ -202,7 +202,7 @@ End Function _
 
 
 '/*
-'■このworkbook以外のbookを閉じる■
+'このworkbook以外のbookを閉じる
 '   ※上書き保存しない
 '*/
 
@@ -224,7 +224,7 @@ End Function _
 
 
 '/*
-'■文字の角度を変更する■
+'文字の角度を変更する
 '
 '   @param  [Range]変更箇所
 '   @param  [Integer]角度
@@ -239,7 +239,7 @@ End Function _
 
 
 '/*
-'■文字を縦書きにする■
+'文字を縦書きにする
 '
 '   @param  [Range]変更箇所
 '
