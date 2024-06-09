@@ -1,0 +1,253 @@
+
+'/*
+'■開始■
+'*/
+
+Function macroStart()
+
+    With Application
+    
+        .Calculation = xlCalculationManual  '自動計算OFF
+        .ScreenUpdating = False             '描画OFF
+        .EnableEvents = False               'イベントOFF
+        .Cursor = xlDefault                 'カーソルOFF
+    
+    End With
+
+End Function _
+
+
+'/*
+'■終了■
+'*/
+
+Function macroEnd()
+
+    With Application
+    
+        .Cursor = xlDefault                 'カーソルOFF
+        .EnableEvents = False               'イベントOFF
+        .ScreenUpdating = False             '描画OFF
+        .Calculation = xlCalculationManual  '自動計算OFF
+    
+    End With
+
+End Function _
+
+
+Function deleteWorksheet(ws As Worksheet)
+
+    Application.DisplayAlerts = False
+    ws.Delete
+    Application.DisplayAlerts = True
+
+End Function _
+
+
+Function deleteBook(wbPath As String)
+
+    If Dir(wbPath) <> "" Then
+        
+        'Application.DisplayAlerts = False
+        Kill wbPath
+        'Application.DisplayAlerts = True
+        
+    Else
+        
+        MsgBox "存在なし:= [" & wbPath & "]"
+        
+    End If
+
+End Function _
+
+
+'/*
+'■ファイルの存在確認■
+'
+'   @param  fileName(参照ファイル名)
+'
+'   @return [Boolean]   True   readFile(参照ファイルのフルパス)
+'                       False 「(参照ファイル名)が存在しない」とメッセージ表示してマクロ終了
+'*/
+
+Function findFile(fileName As String) As String
+
+    On Error GoTo functionError
+
+        Dim filePath As String
+        filePath = Dir(ThisWorkbook.path & fileName)
+    
+        If filePath = "" Then
+            MsgBox "存在なし:= [" & fileName & "]"
+            End
+        End If
+    
+        findFile = filePath
+    
+        Exit Function
+    
+functionError:
+    MsgBox "FunctionE:= [VBA]Tool.findFile"
+    End
+    
+End Function _
+
+
+'/*
+'■このbookの最後に指定した名称でシートを追加■
+'   ※同名のシートが存在する場合は先に削除'
+'
+'   @param  [String]指定するシート名
+'
+'   @return [Worksheet]追加したシートオブジェクト
+'*/
+
+Function addSheet(addSheetName As String) As Worksheet
+    
+    On Error GoTo functionError
+    
+            For Each sheet In ThisWorkbook.Worksheets
+            
+                If sheet.Name = addSheetName Then
+                    
+                    deleteWorksheet ThisWorkbook.Worksheets(addSheetName)
+                    Exit For
+                    
+                End If
+                
+            Next
+        
+        With ThisWorkbook.Worksheets
+        
+            Dim ws As Worksheet
+        
+            Set ws = .Add(after:=.Item(.Count))
+            ws.Name = addSheetName
+            
+            Set addSheet = ws
+            
+        End With
+        
+        Exit Function
+        
+functionError:
+    MsgBox "functionE:= [VBA]Tool.addSheet"
+    End
+    
+End Function _
+
+
+'/*
+'■対象Bookが開いているか確認■
+'
+'   @param  [String]対象ファイルのパス
+'
+'   @return [Boolean]開いていなければTrue
+'*/
+
+Function isBookOpend(ByVal filePath As String) As Boolean
+
+    On Error Resume Next
+    
+        Open filePath For Append As #1
+        Close #1
+        
+        If Err.Number > 0 Then
+        
+            isBookOpend = True
+            
+        Else
+        
+            isBookOpend = False
+            
+        End If
+
+End Function _
+
+
+'/*
+'■選択したブックのパスを取得する■
+'
+'   @param  [String]選択させるファイルの種類
+'
+'   @return [String]指定したBookのファイルパス
+'*/
+
+Function openSelectBook(ByVal fileType As String) As String
+
+    Dim objDialog As FileDialog
+    Set objDialog = Application.FileDialog(msoFileDialogFilePicker)
+    Dim folderPath As String
+    folderPath = ThisWorkbook.path
+
+    With objDialog
+    
+        .AllowMultiSelect = False
+        .InitialFileName = folderPath
+        .Title = [fileType] & "を選択してください"
+        
+        If .Show Then
+        
+            openSelectBook = .SelectedItems(1)
+            
+        Else
+        
+            End
+        
+        End If
+    
+    End With
+
+End Function _
+
+
+'/*
+'■このworkbook以外のbookを閉じる■
+'   ※上書き保存しない
+'*/
+
+Function closeAllWorkbook()
+
+    Dim wb As Workbook
+
+    For Each wb In Workbooks
+    
+        If Not wb.Name = ThisWorkbook.Name Then
+        
+            wb.Close saveChanges:=False
+            
+        End If
+        
+    Next
+
+End Function _
+
+
+'/*
+'■文字の角度を変更する■
+'
+'   @param  [Range]変更箇所
+'   @param  [Integer]角度
+'
+'*/
+
+Function changeRaneAngle(myRange As Range, angle As Integer)
+
+    myRange.Orientation = angle
+
+End Function _
+
+
+'/*
+'■文字を縦書きにする■
+'
+'   @param  [Range]変更箇所
+'
+'*/
+
+Function changeRangeVertical(myRange As Range)
+
+    myRange.Orientation = xlVertical
+
+End Function _
+
