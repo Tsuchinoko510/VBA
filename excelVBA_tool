@@ -64,25 +64,25 @@ End Function _
 '/*
 'ファイルの存在確認
 '
-'   @param  fileName(参照ファイル名)
+'   @param  filePath(参照ファイルのフルパス)
 '
 '   @return [Boolean]   True   readFile(参照ファイルのフルパス)
 '                       False 「(参照ファイル名)が存在しない」とメッセージ表示してマクロ終了
 '*/
 
-Function findFile(fileName As String) As String
+Function findFile(filePath As String) As String
 
     On Error GoTo functionError
 
-        Dim filePath As String
-        filePath = Dir(ThisWorkbook.path & fileName)
+        Dim result As String
+        result = Dir(filePath)
     
-        If filePath = "" Then
+        If result = "" Then
             MsgBox "存在なし:= [" & fileName & "]"
             End
         End If
     
-        findFile = filePath
+        findFile = result
     
         Exit Function
     
@@ -106,9 +106,9 @@ Function addSheet(addSheetName As String) As Worksheet
     
     On Error GoTo functionError
     
-            For Each sheet In ThisWorkbook.Worksheets
+            For Each Sheet In ThisWorkbook.Worksheets
             
-                If sheet.Name = addSheetName Then
+                If Sheet.name = addSheetName Then
                     
                     deleteWorksheet ThisWorkbook.Worksheets(addSheetName)
                     Exit For
@@ -122,7 +122,7 @@ Function addSheet(addSheetName As String) As Worksheet
             Dim ws As Worksheet
         
             Set ws = .Add(after:=.Item(.Count))
-            ws.Name = addSheetName
+            ws.name = addSheetName
             
             Set addSheet = ws
             
@@ -173,12 +173,12 @@ End Function _
 '   @return [String]指定したBookのファイルパス
 '*/
 
-Function openSelectBook(ByVal fileType As String) As String
+Function getPathSelectBook(ByVal fileType As String) As String
 
     Dim objDialog As FileDialog
     Set objDialog = Application.FileDialog(msoFileDialogFilePicker)
     Dim folderPath As String
-    folderPath = ThisWorkbook.path
+    folderPath = ThisWorkbook.Path
 
     With objDialog
     
@@ -188,7 +188,7 @@ Function openSelectBook(ByVal fileType As String) As String
         
         If .Show Then
         
-            openSelectBook = .SelectedItems(1)
+            getPathSelectBook = .SelectedItems(1)
             
         Else
         
@@ -212,7 +212,7 @@ Function closeAllWorkbook()
 
     For Each wb In Workbooks
     
-        If Not wb.Name = ThisWorkbook.Name Then
+        If Not wb.name = ThisWorkbook.name Then
         
             wb.Close saveChanges:=False
             
@@ -248,6 +248,38 @@ End Function _
 Function changeRangeVertical(myRange As Range)
 
     myRange.Orientation = xlVertical
+
+End Function _
+
+
+'/*
+'指定Rangeからの最終行を取得する
+'
+'   @param  [Worksheet]対象のシート
+'   @param  [Range]始点
+'
+'   @return [Lomg]最終行
+'*/
+
+Function getLastRow(myRange As Range) As Long
+
+    getLastRow = myRange.SpecialCells(xlLastCell).Row
+
+End Function _
+
+
+'/*
+'指定Rangeからの最終列を取得する
+'
+'   @param  [Worksheet]対象のシート
+'   @param  [Range]始点
+'
+'   @return [Lomg]最終列
+'*/
+
+Function getLastColumn(myRange As Range) As Long
+
+    getLastColumn = myRange.SpecialCells(xlLastCell).Column
 
 End Function _
 
