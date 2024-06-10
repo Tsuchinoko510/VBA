@@ -1,0 +1,34 @@
+
+Function GetNoufuTBL()
+
+    Dim dumpName As String
+    dumpName = "SHINKOKU.NOUFU"
+
+    Dim dumpPath As String
+    dumpPath = Tool.getPathSelectBook(dumpName)
+    
+    Dim flg As Boolean
+    flg = Tool.isBookOpend(filePath)
+    
+    If Not flg Then
+        MsgBox dumpName & "が使用中です"
+        End
+    End If
+    
+    Dim dumpBook As Workbook
+    Set dumpBook = Workbooks.Open(dumpPath)
+    
+    With dumpBook
+    
+        Dim lastRow As Long
+        lastRow = Tool.getLastRow(.Worksheets(1).Range("A1"))
+        
+        Dim lastColumn As Long
+        lastColumn = Tool.getLastColumn(.Worksheets(1).Range("A1"))
+    
+    End With
+    
+    MsgBox "[SHINKOKU.NOUFU] lastRow:= " & lastRow & "行, lastColumn:= " & lastColumn & "列"
+    
+End Function _
+
