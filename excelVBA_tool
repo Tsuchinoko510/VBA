@@ -283,3 +283,14 @@ Function getLastColumn(myRange As Range) As Long
 
 End Function _
 
+
+Sub setA1()
+  Dim ws As Worksheet
+  For Each ws In Worksheets
+    ws.Select
+    ws.Range("A1").Select
+  Next
+  Sheets(1).Select
+  
+  ThisWorkbook.Save
+End Sub
