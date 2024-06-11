@@ -1,0 +1,252 @@
+
+Function GetNoufuTBL()
+
+    Dim dumpName As String
+    dumpName = "SHINKOKU.NOUFU"
+
+    Dim dumpPath As String
+    dumpPath = Tool.getPathSelectBook(dumpName)
+    
+    Dim flg As Boolean
+    flg = Tool.isBookOpend(dumpPath)
+    
+    If flg Then
+        MsgBox dumpName & "が使用中です"
+        End
+    End If
+    
+    Dim dumpBook As Workbook
+    Set dumpBook = Workbooks.Open(dumpPath)
+    
+    With dumpBook.Worksheets(1)
+    
+        Dim lastRow As Long
+        lastRow = Tool.getLastRow(.Range("A1"))
+        
+        Dim lastColumn As Long
+        lastColumn = Tool.getLastColumn(.Range("A1"))
+    
+        Dim header As NoufuHeader
+        Set header = New NoufuHeader
+        
+        Call header.create(.Range("1:1"), header)
+        
+        Dim noufuList As Collection
+        Set noufuList = New Collection
+        
+        Dim data As NOUFU
+        Set data = New NOUFU
+        
+        For row = 1 To lastRow
+            Call addData(dumpBook.Worksheets(1), noufuList, header, data, row)
+            DoEvents
+        Next
+        
+    End With
+    
+    Application.DisplayAlerts = False
+    dumpBook.Close SaveChanges:=False
+    Application.DisplayAlerts = True
+    
+    Call createNoufuSheet(header, noufuList)
+    
+End Function _
+
+
+Private Function createNoufuSheet(ByVal header As NoufuHeader, ByVal noufuList As Collection)
+
+    Dim ws As Worksheet
+    Set ws = Tool.addSheet("SHINKOKU.NOUFU")
+    
+    Dim data As NOUFU
+    Dim row As Integer
+    row = 1
+
+    For Each data In noufuList
+        
+        ws.Cells(row, 1).EntireRow.NumberFormatLocal = "@"
+        
+        Call writeRowNoufu(ws, header, data, row)
+        row = row + 1
+        DoEvents
+        
+    Next
+
+End Function _
+
+
+Private Function writeRowNoufu(ByVal ws As Worksheet, ByVal header As NoufuHeader, ByVal data As NOUFU, row As Integer)
+
+    ws.Cells(row, header.colUKEY_BNG).value = data.UKEY_BNG
+    ws.Cells(row, header.colSNK_KNKT_KSBNG).value = data.SNK_KNKT_KSBNG
+    ws.Cells(row, header.colUKEBNG).value = data.UKEBNG
+    ws.Cells(row, header.colTZKI_ID).value = data.TZKI_ID
+    ws.Cells(row, header.colJSNDT).value = data.JSNDT
+    ws.Cells(row, header.colUSRNO).value = data.USRNO
+    ws.Cells(row, header.colSNK_KNKT_SRBNG).value = data.SNK_KNKT_SRBNG
+    ws.Cells(row, header.colDHYO_KSBNG).value = data.DHYO_KSBNG
+    ws.Cells(row, header.colJSNJ_FRWK_KSBNG).value = data.JSNJ_FRWK_KSBNG
+    ws.Cells(row, header.colSHRI_TUBN).value = data.SHRI_TUBN
+    ws.Cells(row, header.colSHRI_YMD).value = data.SHRI_YMD
+    ws.Cells(row, header.colKNJ_NAM).value = data.KNJ_NAM
+    ws.Cells(row, header.colKNJ_AD).value = data.KNJ_AD
+    ws.Cells(row, header.colKKN_TO).value = data.KKN_TO
+    ws.Cells(row, header.colKKN_FR).value = data.KKN_FR
+    ws.Cells(row, header.colZMK).value = data.ZMK
+    ws.Cells(row, header.colNOF_DT).value = data.NOF_DT
+    ws.Cells(row, header.colHN_ZEI).value = data.HN_ZEI
+    ws.Cells(row, header.colENTI_ZEI).value = data.ENTI_ZEI
+    ws.Cells(row, header.colRSH_ZEI).value = data.RSH_ZEI
+    ws.Cells(row, header.colKASN_ZEI).value = data.KASN_ZEI
+    ws.Cells(row, header.colKASN_ZEI_SHU).value = data.KASN_ZEI_SHU
+    ws.Cells(row, header.colKIKI_NEN).value = data.KIKI_NEN
+    ws.Cells(row, header.colJSNJ_DNK_KNA_NAM).value = data.JSNJ_DNK_KNA_NAM
+    ws.Cells(row, header.colJSNJ_DNK_KNJ_NAM).value = data.JSNJ_DNK_KNJ_NAM
+    ws.Cells(row, header.colJSNJ_DNK_AD).value = data.JSNJ_DNK_AD
+    ws.Cells(row, header.colJSNJ_DNK_TEL).value = data.JSNJ_DNK_TEL
+    ws.Cells(row, header.colJSNJ_DNK_SSHK_KBN).value = data.JSNJ_DNK_SSHK_KBN
+    ws.Cells(row, header.colJYUKASN_ZEI).value = data.JYUKASN_ZEI
+    ws.Cells(row, header.colSHGU_COD).value = data.SHGU_COD
+    ws.Cells(row, header.colSHNTK_KBN_BNG).value = data.SHNTK_KBN_BNG
+    ws.Cells(row, header.colSNK_KBN).value = data.SNK_KBN
+    ws.Cells(row, header.colSNS_SHU).value = data.SNS_SHU
+    ws.Cells(row, header.colTKTI_SHNTK_NAM).value = data.TKTI_SHNTK_NAM
+    ws.Cells(row, header.colNZAMT_SUM_TSRYAMT).value = data.NZAMT_SUM_TSRYAMT
+    ws.Cells(row, header.colNOF_KBN_BNG).value = data.NOF_KBN_BNG
+    ws.Cells(row, header.colNOF_KANU_SISH_YMD).value = data.NOF_KANU_SISH_YMD
+    ws.Cells(row, header.colNOF_AMT).value = data.NOF_AMT
+    ws.Cells(row, header.colNOF_KBN).value = data.NOF_KBN
+    ws.Cells(row, header.colNOFZ_STS).value = data.NOFZ_STS
+    ws.Cells(row, header.colNOF_BSH).value = data.NOF_BSH
+    ws.Cells(row, header.colNOF_NYRYK_SHU).value = data.NOF_NYRYK_SHU
+    ws.Cells(row, header.colHRYU).value = data.HRYU
+    ws.Cells(row, header.colSINYDRTN_KINK_COD).value = data.SINYDRTN_KINK_COD
+    ws.Cells(row, header.colRNR_HITSIGY_CT).value = data.RNR_HITSIGY_CT
+    ws.Cells(row, header.colLST_UPDT).value = data.LST_UPDT
+    ws.Cells(row, header.colSHMK_SHRI_SNT_COD).value = data.SHMK_SHRI_SNT_COD
+    ws.Cells(row, header.colSHMK_SHRI_YMD).value = data.SHMK_SHRI_YMD
+    ws.Cells(row, header.colSHMK_SHRI_JKK).value = data.SHMK_SHRI_JKK
+    ws.Cells(row, header.colSHMK_SHRI_TUBN).value = data.SHMK_SHRI_TUBN
+    ws.Cells(row, header.colSHRI_JKK).value = data.SHRI_JKK
+    ws.Cells(row, header.colTZKI_MJRVER_BNG).value = data.TZKI_MJRVER_BNG
+    ws.Cells(row, header.colZMK_KBN).value = data.ZMK_KBN
+    ws.Cells(row, header.colERR_KBN).value = data.ERR_KBN
+    ws.Cells(row, header.colDIRECT_IRI_KBN).value = data.DIRECT_IRI_KBN
+    ws.Cells(row, header.colKJTSTI_YMD).value = data.KJTSTI_YMD
+    ws.Cells(row, header.colKJTSTI_TISH_KBN).value = data.KJTSTI_TISH_KBN
+    ws.Cells(row, header.colCHUKN_SINKKKKN_FR).value = data.CHUKN_SINKKKKN_FR
+    ws.Cells(row, header.colCHUKN_SINKKKKN_TO).value = data.CHUKN_SINKKKKN_TO
+    ws.Cells(row, header.colCHUKN_KBN).value = data.CHUKN_KBN
+    ws.Cells(row, header.colCHUKN_NUF_KISU).value = data.CHUKN_NUF_KISU
+    ws.Cells(row, header.colDRCTIRIJ_KINKCOD).value = data.DRCTIRIJ_KINKCOD
+    ws.Cells(row, header.colDRCTIRIJ_HNSTNCOD).value = data.DRCTIRIJ_HNSTNCOD
+    ws.Cells(row, header.colDRCTIRIJ_KINK_NAM).value = data.DRCTIRIJ_KINK_NAM
+    ws.Cells(row, header.colDRCTIRIJ_YCKNSHBT).value = data.DRCTIRIJ_YCKNSHBT
+    ws.Cells(row, header.colDRCTIRIJ_KUZBNG).value = data.DRCTIRIJ_KUZBNG
+    ws.Cells(row, header.colDRCTIRIJ_SHKBTBNG).value = data.DRCTIRIJ_SHKBTBNG
+    ws.Cells(row, header.colDRCTIRIJ_NNSHUBNG).value = data.DRCTIRIJ_NNSHUBNG
+    ws.Cells(row, header.colDIRECT_SHRI_YMDHM).value = data.DIRECT_SHRI_YMDHM
+    ws.Cells(row, header.colHN_ZEI2).value = data.HN_ZEI2
+    ws.Cells(row, header.colENTI_ZEI2).value = data.ENTI_ZEI2
+    ws.Cells(row, header.colRSH_ZEI2).value = data.RSH_ZEI2
+    ws.Cells(row, header.colKASN_ZEI2).value = data.KASN_ZEI2
+    ws.Cells(row, header.colKASN_ZEI_SHU2).value = data.KASN_ZEI_SHU2
+    ws.Cells(row, header.colJYUKASN_ZEI2).value = data.JYUKASN_ZEI2
+    ws.Cells(row, header.colSNK_KBN2).value = data.SNK_KBN2
+    ws.Cells(row, header.colHOZN_KKN_MNRYO_D).value = data.HOZN_KKN_MNRYO_D
+    ws.Cells(row, header.colHOZN_KKN_EXT_FLG).value = data.HOZN_KKN_EXT_FLG
+    ws.Cells(row, header.colRNR_DEL_FLG).value = data.RNR_DEL_FLG
+    ws.Cells(row, header.colSHRI_YKYU_DT).value = data.SHRI_YKYU_DT
+
+End Function _
+
+
+Private Function addData(ByVal ws As Worksheet, ByRef noufuList As Collection, ByVal header As NoufuHeader, ByRef data As NOUFU, ByVal row As Integer)
+
+    Set data = New NOUFU
+    
+    data.UKEY_BNG = ws.Cells(row, header.colUKEY_BNG).value
+    data.SNK_KNKT_KSBNG = ws.Cells(row, header.colSNK_KNKT_KSBNG).value
+    data.UKEBNG = ws.Cells(row, header.colUKEBNG).value
+    data.TZKI_ID = ws.Cells(row, header.colTZKI_ID).value
+    data.JSNDT = ws.Cells(row, header.colJSNDT).value
+    data.USRNO = ws.Cells(row, header.colUSRNO).value
+    data.SNK_KNKT_SRBNG = ws.Cells(row, header.colSNK_KNKT_SRBNG).value
+    data.DHYO_KSBNG = ws.Cells(row, header.colDHYO_KSBNG).value
+    data.JSNJ_FRWK_KSBNG = ws.Cells(row, header.colJSNJ_FRWK_KSBNG).value
+    data.SHRI_TUBN = ws.Cells(row, header.colSHRI_TUBN).value
+    data.SHRI_YMD = ws.Cells(row, header.colSHRI_YMD).value
+    data.KNJ_NAM = ws.Cells(row, header.colKNJ_NAM).value
+    data.KNJ_AD = ws.Cells(row, header.colKNJ_AD).value
+    data.KKN_TO = ws.Cells(row, header.colKKN_TO).value
+    data.KKN_FR = ws.Cells(row, header.colKKN_FR).value
+    data.ZMK = ws.Cells(row, header.colZMK).value
+    data.NOF_DT = ws.Cells(row, header.colNOF_DT).value
+    data.HN_ZEI = ws.Cells(row, header.colHN_ZEI).value
+    data.ENTI_ZEI = ws.Cells(row, header.colENTI_ZEI).value
+    data.RSH_ZEI = ws.Cells(row, header.colRSH_ZEI).value
+    data.KASN_ZEI = ws.Cells(row, header.colKASN_ZEI).value
+    data.KASN_ZEI_SHU = ws.Cells(row, header.colKASN_ZEI_SHU).value
+    data.KIKI_NEN = ws.Cells(row, header.colKIKI_NEN).value
+    data.JSNJ_DNK_KNA_NAM = ws.Cells(row, header.colJSNJ_DNK_KNA_NAM).value
+    data.JSNJ_DNK_KNJ_NAM = ws.Cells(row, header.colJSNJ_DNK_KNJ_NAM).value
+    data.JSNJ_DNK_AD = ws.Cells(row, header.colJSNJ_DNK_AD).value
+    data.JSNJ_DNK_TEL = ws.Cells(row, header.colJSNJ_DNK_TEL).value
+    data.JSNJ_DNK_SSHK_KBN = ws.Cells(row, header.colJSNJ_DNK_SSHK_KBN).value
+    data.JYUKASN_ZEI = ws.Cells(row, header.colJYUKASN_ZEI).value
+    data.SHGU_COD = ws.Cells(row, header.colSHGU_COD).value
+    data.SHNTK_KBN_BNG = ws.Cells(row, header.colSHNTK_KBN_BNG).value
+    data.SNK_KBN = ws.Cells(row, header.colSNK_KBN).value
+    data.SNS_SHU = ws.Cells(row, header.colSNS_SHU).value
+    data.TKTI_SHNTK_NAM = ws.Cells(row, header.colTKTI_SHNTK_NAM).value
+    data.NZAMT_SUM_TSRYAMT = ws.Cells(row, header.colNZAMT_SUM_TSRYAMT).value
+    data.NOF_KBN_BNG = ws.Cells(row, header.colNOF_KBN_BNG).value
+    data.NOF_KANU_SISH_YMD = ws.Cells(row, header.colNOF_KANU_SISH_YMD).value
+    data.NOF_AMT = ws.Cells(row, header.colNOF_AMT).value
+    data.NOF_KBN = ws.Cells(row, header.colNOF_KBN).value
+    data.NOFZ_STS = ws.Cells(row, header.colNOFZ_STS).value
+    data.NOF_BSH = ws.Cells(row, header.colNOF_BSH).value
+    data.NOF_NYRYK_SHU = ws.Cells(row, header.colNOF_NYRYK_SHU).value
+    data.HRYU = ws.Cells(row, header.colHRYU).value
+    data.SINYDRTN_KINK_COD = ws.Cells(row, header.colSINYDRTN_KINK_COD).value
+    data.RNR_HITSIGY_CT = ws.Cells(row, header.colRNR_HITSIGY_CT).value
+    data.LST_UPDT = ws.Cells(row, header.colLST_UPDT).value
+    data.SHMK_SHRI_SNT_COD = ws.Cells(row, header.colSHMK_SHRI_SNT_COD).value
+    data.SHMK_SHRI_YMD = ws.Cells(row, header.colSHMK_SHRI_YMD).value
+    data.SHMK_SHRI_JKK = ws.Cells(row, header.colSHMK_SHRI_JKK).value
+    data.SHMK_SHRI_TUBN = ws.Cells(row, header.colSHMK_SHRI_TUBN).value
+    data.SHRI_JKK = ws.Cells(row, header.colSHRI_JKK).value
+    data.TZKI_MJRVER_BNG = ws.Cells(row, header.colTZKI_MJRVER_BNG).value
+    data.ZMK_KBN = ws.Cells(row, header.colZMK_KBN).value
+    data.ERR_KBN = ws.Cells(row, header.colERR_KBN).value
+    data.DIRECT_IRI_KBN = ws.Cells(row, header.colDIRECT_IRI_KBN).value
+    data.KJTSTI_YMD = ws.Cells(row, header.colKJTSTI_YMD).value
+    data.KJTSTI_TISH_KBN = ws.Cells(row, header.colKJTSTI_TISH_KBN).value
+    data.CHUKN_SINKKKKN_FR = ws.Cells(row, header.colCHUKN_SINKKKKN_FR).value
+    data.CHUKN_SINKKKKN_TO = ws.Cells(row, header.colCHUKN_SINKKKKN_TO).value
+    data.CHUKN_KBN = ws.Cells(row, header.colCHUKN_KBN).value
+    data.CHUKN_NUF_KISU = ws.Cells(row, header.colCHUKN_NUF_KISU).value
+    data.DRCTIRIJ_KINKCOD = ws.Cells(row, header.colDRCTIRIJ_KINKCOD).value
+    data.DRCTIRIJ_HNSTNCOD = ws.Cells(row, header.colDRCTIRIJ_HNSTNCOD).value
+    data.DRCTIRIJ_KINK_NAM = ws.Cells(row, header.colDRCTIRIJ_KINK_NAM).value
+    data.DRCTIRIJ_YCKNSHBT = ws.Cells(row, header.colDRCTIRIJ_YCKNSHBT).value
+    data.DRCTIRIJ_KUZBNG = ws.Cells(row, header.colDRCTIRIJ_KUZBNG).value
+    data.DRCTIRIJ_SHKBTBNG = ws.Cells(row, header.colDRCTIRIJ_SHKBTBNG).value
+    data.DRCTIRIJ_NNSHUBNG = ws.Cells(row, header.colDRCTIRIJ_NNSHUBNG).value
+    data.DIRECT_SHRI_YMDHM = ws.Cells(row, header.colDIRECT_SHRI_YMDHM).value
+    data.HN_ZEI2 = ws.Cells(row, header.colHN_ZEI2).value
+    data.ENTI_ZEI2 = ws.Cells(row, header.colENTI_ZEI2).value
+    data.RSH_ZEI2 = ws.Cells(row, header.colRSH_ZEI2).value
+    data.KASN_ZEI2 = ws.Cells(row, header.colKASN_ZEI2).value
+    data.KASN_ZEI_SHU2 = ws.Cells(row, header.colKASN_ZEI_SHU2).value
+    data.JYUKASN_ZEI2 = ws.Cells(row, header.colJYUKASN_ZEI2).value
+    data.SNK_KBN2 = ws.Cells(row, header.colSNK_KBN2).value
+    data.HOZN_KKN_MNRYO_D = ws.Cells(row, header.colHOZN_KKN_MNRYO_D).value
+    data.HOZN_KKN_EXT_FLG = ws.Cells(row, header.colHOZN_KKN_EXT_FLG).value
+    data.RNR_DEL_FLG = ws.Cells(row, header.colRNR_DEL_FLG).value
+    data.SHRI_YKYU_DT = ws.Cells(row, header.colSHRI_YKYU_DT).value
+
+    noufuList.Add data
+
+End Function _
+
