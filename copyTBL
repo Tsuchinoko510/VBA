@@ -1,0 +1,88 @@
+
+Function Find(bookType As String) As Workbook
+
+    Dim bookPath As String
+    bookPath = Tool.getPathSelectBook(bookType)
+    
+    Dim findBook As Workbook
+    Set findBook = Workbooks.Open(bookPath, ReadOnly:=True)
+    Windows(findBook.name).Visible = False
+    
+    Set Find = findBook
+
+End Function _
+
+
+Function closeBookNotSave(ByRef rWB As Workbook)
+
+    Application.DisplayAlerts = False
+    rWB.Close SaveChanges:=False
+    Application.DisplayAlerts = True
+
+End Function _
+
+
+Function Copy(ByVal vToWS As Worksheet, ByRef vFromWB As Workbook)
+
+    Dim vToLastColumn As Integer
+    vToLastColumn = vToWS.Range("A1").End(xlToRight).Column
+
+    Dim vToLastRow As Integer
+    vToLastRow = Tool.getLastRow(vToWS.Range("A1"))
+    
+    If vToLastRow >= 6 Then
+        Range(vToWS.Cells(6, 1), vToWS.Cells(vToLastRow, vToLastColumn)).Delete
+    End If
+    
+    
+    
+    Dim vFromWS As Worksheet
+    Set vFromWS = vFromWB.Worksheets(1)
+    
+    Dim vFromLastRow As Long
+    vFromLastRow = Tool.getLastRow(vFromWS.Range("A1"))
+    
+
+    
+    Dim vToColumn As Integer
+    For vToColumn = 1 To vToLastColumn
+    
+        Call copyValue(vToWS, vFromWB, vFromLastRow, vToColumn)
+        DoEvents
+        
+    Next
+    
+    Exit Function
+    
+End Function _
+
+
+Private Function copyValue(ByVal vToWS As Worksheet, ByRef vFromWB As Workbook, ByVal vFromLastRow As Integer, ByVal vToColumn As Integer)
+
+    Dim word As String
+    word = vToWS.Cells(1, vToColumn).value
+
+    Dim vFromColumn As Integer
+    
+On Error GoTo FindError
+    
+    With vFromWB.Worksheets(1)
+        
+        vFromColumn = .Range("1:1").Find(word, LookIn:=xlValues, SearchOrder:=xlByRows).Column
+
+        Range(.Cells(6, vFromColumn), .Cells(vFromLastRow, vFromColumn)).Copy
+        Range(vToWS.Cells(6, vToColumn), vToWS.Cells(vFromLastRow, vToColumn)).PasteSpecial Paste:=xlPasteAll
+            
+    End With
+        
+Exit Function
+
+FindError:
+    MsgBox "【" & vFromWB.name & "】のダンプに" & vbCrLf & _
+            "[" & word & "]の項目がありません" & vbCrLf & _
+            "新しくダンプを作成し直してください", Title:="Error: ダンプ"
+            
+    End
+
+End Function _
+
