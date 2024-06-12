@@ -8,9 +8,9 @@ Function macroStart()
     With Application
     
         .Calculation = xlCalculationManual  '自動計算OFF
-        .ScreenUpdating = False             '描画OFF
-        .EnableEvents = False               'イベントOFF
-        .Cursor = xlDefault                 'カーソルOFF
+        .ScreenUpdating = False                 '描画OFF
+        .EnableEvents = False                     'イベントOFF
+        .Cursor = xlDefault                         'カーソルOFF
     
     End With
 
@@ -25,9 +25,9 @@ Function macroEnd()
 
     With Application
     
-        .Cursor = xlDefault                 'カーソルOFF
-        .EnableEvents = False               'イベントOFF
-        .ScreenUpdating = False             '描画OFF
+        .Cursor = xlDefault                         'カーソルOFF
+        .EnableEvents = False                     'イベントOFF
+        .ScreenUpdating = False                 '描画OFF
         .Calculation = xlCalculationManual  '自動計算OFF
     
     End With
@@ -64,13 +64,12 @@ End Function _
 '/*
 'ファイルの存在確認
 '
-'   @param  filePath(参照ファイルのフルパス)
+'   @param  [String] filePath(参照ファイルのフルパス)
 '
-'   @return [Boolean]   True   readFile(参照ファイルのフルパス)
-'                       False 「(参照ファイル名)が存在しない」とメッセージ表示してマクロ終了
+'   @return  [Boolean] 存在：True, なし：False
 '*/
 
-Function findFile(filePath As String) As String
+Function findFile(filePath As String) As Boolean
 
     On Error GoTo functionError
 
@@ -78,11 +77,10 @@ Function findFile(filePath As String) As String
         result = Dir(filePath)
     
         If result = "" Then
-            MsgBox "存在なし:= [" & fileName & "]"
-            End
+            findFile = False
+        Else
+            findFile = True
         End If
-    
-        findFile = result
     
         Exit Function
     
@@ -145,11 +143,11 @@ End Function _
 '   @return [Boolean]開いていなければTrue
 '*/
 
-Function isBookOpend(ByVal filePath As String) As Boolean
+Function isBookOpend(ByVal bookPath As String) As Boolean
 
     On Error Resume Next
     
-        Open filePath For Append As #1
+        Open bookPath For Append As #1
         Close #1
         
         If Err.Number > 0 Then
@@ -166,14 +164,14 @@ End Function _
 
 
 '/*
-'選択したブックのパスを取得する
+'選択したファイルのパスを取得する
 '
 '   @param  [String]選択させるファイルの種類
 '
-'   @return [String]指定したBookのファイルパス
+'   @return [String]指定したファイルのパス
 '*/
 
-Function getPathSelectBook(ByVal fileType As String) As String
+Function getPathSelectFile(ByVal selectFileType As String) As String
 
     Dim objDialog As FileDialog
     Set objDialog = Application.FileDialog(msoFileDialogFilePicker)
@@ -184,15 +182,15 @@ Function getPathSelectBook(ByVal fileType As String) As String
     
         .AllowMultiSelect = False
         .InitialFileName = folderPath
-        .Title = [fileType] & "を選択してください"
+        .Title = [selectFileType] & "を選択してください"
         
         If .Show Then
         
-            getPathSelectBook = .SelectedItems(1)
+            getPathSelectFile = .SelectedItems(1)
             
         Else
         
-            End
+            Exit Function
         
         End If
     
@@ -214,7 +212,7 @@ Function closeAllWorkbook()
     
         If Not wb.name = ThisWorkbook.name Then
         
-            wb.Close saveChanges:=False
+            wb.Close SaveChanges:=False
             
         End If
         
@@ -231,9 +229,9 @@ End Function _
 '
 '*/
 
-Function changeRaneAngle(myRange As Range, angle As Integer)
+Function setRaneAngle(ByVal setRange As Range, ByVal angle As Integer)
 
-    myRange.Orientation = angle
+    setRange.Orientation = angle
 
 End Function _
 
@@ -245,9 +243,9 @@ End Function _
 '
 '*/
 
-Function changeRangeVertical(myRange As Range)
+Function setRangeVertical(ByVal setRange As Range)
 
-    myRange.Orientation = xlVertical
+    setRange.Orientation = xlVertical
 
 End Function _
 
@@ -261,9 +259,10 @@ End Function _
 '   @return [Lomg]最終行
 '*/
 
-Function getLastRow(myRange As Range) As Long
+Function getLastRow(startRange As Range) As Long
 
-    getLastRow = myRange.SpecialCells(xlLastCell).Row
+    getLastRow = startRange.SpecialCells(xlLastCell).row
+    'getLastRow = startRange.End(xlDown).row
 
 End Function _
 
@@ -277,12 +276,17 @@ End Function _
 '   @return [Lomg]最終列
 '*/
 
-Function getLastColumn(myRange As Range) As Long
+Function getLastColumn(startRange As Range) As Long
 
-    getLastColumn = myRange.SpecialCells(xlLastCell).Column
+    getLastColumn = startRange.SpecialCells(xlLastCell).column
+    'getLastColumn = startRange.End(xlToRight).Column
 
 End Function _
 
+
+'/*
+'すべてのシートでRange("A1")を指定後、1シート目を選択してブックを保存する
+'*/
 
 Sub setA1()
   Dim ws As Worksheet
@@ -293,4 +297,50 @@ Sub setA1()
   Sheets(1).Select
   
   ThisWorkbook.Save
-End Sub
+End Sub _
+
+
+'/*
+'行で対象が何列目にいるか検索する
+'
+'   @param  [String]検索対象
+'                  [Range]検索範囲(行)
+'
+'   @return  [Integer]列数
+'*/
+
+Function findValueColumn(ByVal vSearchText As String, ByVal vRows As Range) As Integer
+
+    On Error GoTo Error
+    
+        Dim col As Integer
+        col = vRows.Find(vSearchText, LookAt:=xlWhole, SearchOrder:=xlByColumns).column
+        findValueColumn = col
+
+Error:
+    findValueColumn = 0
+    
+End Function _
+
+
+'/*
+'列で対象が何行目にいるか検索する
+'
+'   @param  [String]検索対象
+'                  [Range]検索範囲(列)
+'
+'   @return  [Integer]行数
+'*/
+
+Function findValueRow(ByVal vSearchText As String, ByVal vColumns As Range) As Integer
+
+    On Error GoTo Error
+    
+        Dim row As Integer
+        row = vColumns.Find(vSearchText, LookAt:=xlWhole, SearchOrder:=xlByRows).row
+        findValueRow = row
+
+Error:
+    findValueRow = 0
+    
+End Function
