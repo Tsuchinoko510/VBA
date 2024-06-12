@@ -344,3 +344,120 @@ Error:
     findValueRow = 0
     
 End Function
+
+
+
+'/*
+'２つのRangeを比較して同じサイズか判定する
+'
+'   @param  [Range]比較対象A
+'                  [Range]比較対象B
+'
+'   @return  [Boolean]比較結果
+'*/
+
+Function compareSize(rangeA As Range, rangeB As Range) As Boolean
+    
+    Dim compareRows As Boolean
+    compareRows = False
+    If rangeA.Rows.Count = rangeB.Rows.Count Then compareRows = True
+
+    Dim compareColumns As Boolean
+    compareColumns = False
+    If rangeA.Columns.Count = rangeB.Columns.Count Then compareColumns = True
+    
+    If compareRow And compareColumns Then
+        compareSize = True
+    Else
+        compareSize = False
+    End If
+
+End Function _
+
+
+'/*
+'Range範囲の大きさが同じだったら値をコピーする
+'
+'   @param  [Range]コピー元
+'                  [Range]コピー先
+'
+'*/
+
+Function copyValue(fromRange As Range, toRange As Range)
+
+    If compareSize(fromRange, toRange) Then
+        toRange.Value = fromRange.Value
+    Else
+        Exit Function
+    End If
+
+End Function _
+
+
+'/*
+'シートを指定したBookの最後にコピーする
+'
+'   @param  [Worksheet]コピー元
+'                  [Workbook]コピー先
+'
+'*/
+
+Function copySheet(fromWS As Worksheet, toWB As Workbook)
+
+    With toWB.Worksheets
+    fromWS.Copy after:=.Item(.Count)
+    End With
+
+End Function _
+
+
+'/*
+'コピーした際に利用するクリップボードを初期化する
+'*/
+
+Function clearClipBoard()
+
+    Application.CutCopyMode = False
+
+End Function
+
+'/*
+'正規表現オブジェクト
+'*/
+
+Function RegExp() As Variant
+
+    Dim re As Object
+    Set re = CreateObject("VBScript.RegExp")
+    With re
+        .Pattern = "[0-9]"      '文字パターン
+        .IgnoreCase = False   '大文字と小文字を区別するか[False]、しないか[True]
+        .Global = True           '文字列全体を検索するか[True]、しないか[False]
+    RegExp = re
+    
+    'Dim str1 as String, str2 as String
+    'str1 = "東京1大阪2名古屋3"
+    'str2 = reg.Replace(str1, ",")
+    '
+    'Debug.Print str2
+    
+    
+    
+    'Dim Matches
+    'Set matches = re.Execute(str)
+    '
+    'Dim msg As String
+    'For Each match In matches
+    '   msg = msg & match.Value & "が" & match.FirstIndex &  "文字目に見つかりました"　& vbCrLf
+    'Next Match
+    '
+    'MsgBox msg
+    
+    
+    
+    'Dim str As String
+    'str = "1"
+    'If re.Test(str) then MsgBox "指定したパターンが含まれています"
+    
+End Function
+
