@@ -459,5 +459,52 @@ Function RegExp() As Variant
     'str = "1"
     'If re.Test(str) then MsgBox "指定したパターンが含まれています"
     
-End Function
+End Function _
 
+
+'/*
+'対象フォルダ内のサブファイル一覧を表示する
+'
+'   @param  [String]親フォルダのパス
+'
+'   @return  [Collection]サブファイルのパス一覧
+'*/
+
+Function getListSubFilePath(ByVal vFolderPath As String) As Collection
+
+    Dim list As Collection
+    Set list = New Collection
+    
+    With CreateObject("Scripting.FileSystemObject")
+        For Each f In .GetFolder(vFolderPath).Files
+            list.Add f.Path
+        Next f
+    End With
+    
+    Set SubFolderList = list
+
+End Function _
+
+
+'/*
+'対象フォルダ内のサブフォルダ一覧を表示する
+'
+'   @param  [String]親フォルダのパス
+'
+'   @return  [Collection]サブフォルダのパス一覧
+'*/
+
+Function getListSubFolderPath(ByVal vFolderPath As String) As Collection
+
+    Dim list As Collection
+    Set list = New Collection
+    
+    With CreateObject("Scripting.FileSystemObject")
+        For Each f In .GetFolder(vFolderPath).SubFolders
+            list.Add f.Path
+        Next f
+    End With
+    
+    Set SubFolderList = list
+
+End Function _
