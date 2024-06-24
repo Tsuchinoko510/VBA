@@ -1,4 +1,3 @@
-
 '/*
 '開始
 '*/
@@ -69,7 +68,7 @@ End Function _
 '   @return  [Boolean] 存在：True, なし：False
 '*/
 
-Function findFile(filePath As String) As Boolean
+Function isFileFind(filePath As String) As Boolean
 
     On Error GoTo functionError
 
@@ -87,6 +86,66 @@ Function findFile(filePath As String) As Boolean
 functionError:
     MsgBox "FunctionE:= [VBA]Tool.findFile"
     End
+    
+End Function _
+
+
+'/*
+'ファイルの存在確認
+'
+'   @param  [String] folderPath(参照フォルダのフルパス)
+'
+'   @return  [String] 存在：フォルダパス, なし：""
+'*/
+
+Function findFolderPath(initialPath As String, dlgTitle As String) As String
+    
+    Dim path As String
+    With Application.FileDialog(msoFileDialogFolderPicker)
+    
+        .InitialFileName = initialPath
+        .AllowMultiSelect = False
+        .Title = dlgTitle
+        
+        If .Show Then
+            path = .selectItems(1)
+        Else
+            path = ""
+        End If
+        
+    End With
+    
+    findFolderPath = path
+    
+End Function _
+
+
+'/*
+'ファイルの存在確認
+'
+'   @param  [String] filePath(参照ファイルのフルパス)
+'
+'   @return  [String] 存在：フォルダパス, なし：""
+'*/
+
+Function findFilePath(initialPath As String, dlgTitle As String) As String
+    
+    Dim path As String
+    With Application.FileDialog(msoFileDialogFilePicker)
+    
+        .InitialFileName = initialPath
+        .AllowMultiSelect = False
+        .Title = dlgTitle
+        
+        If .Show Then
+            path = .selectItems(1)
+        Else
+            path = ""
+        End If
+        
+    End With
+    
+    findFolderPath = path
     
 End Function _
 
@@ -119,7 +178,7 @@ Function addSheet(addSheetName As String) As Worksheet
         
             Dim ws As Worksheet
         
-            Set ws = .Add(after:=.Item(.Count))
+            Set ws = .Add(after:=.Item(.count))
             ws.name = addSheetName
             
             Set addSheet = ws
@@ -176,7 +235,7 @@ Function getPathSelectFile(ByVal selectFileType As String) As String
     Dim objDialog As FileDialog
     Set objDialog = Application.FileDialog(msoFileDialogFilePicker)
     Dim folderPath As String
-    folderPath = ThisWorkbook.Path
+    folderPath = ThisWorkbook.path
 
     With objDialog
     
@@ -278,7 +337,7 @@ End Function _
 
 Function getLastColumn(startRange As Range) As Long
 
-    getLastColumn = startRange.SpecialCells(xlLastCell).column
+    getLastColumn = startRange.SpecialCells(xlLastCell).Column
     'getLastColumn = startRange.End(xlToRight).Column
 
 End Function _
@@ -314,7 +373,7 @@ Function findValueColumn(ByVal vSearchText As String, ByVal vRows As Range) As I
     On Error GoTo Error
     
         Dim col As Integer
-        col = vRows.Find(vSearchText, LookAt:=xlWhole, SearchOrder:=xlByColumns).column
+        col = vRows.Find(vSearchText, LookAt:=xlWhole, SearchOrder:=xlByColumns).Column
         findValueColumn = col
 
 Error:
@@ -360,11 +419,11 @@ Function compareSize(rangeA As Range, rangeB As Range) As Boolean
     
     Dim compareRows As Boolean
     compareRows = False
-    If rangeA.Rows.Count = rangeB.Rows.Count Then compareRows = True
+    If rangeA.Rows.count = rangeB.Rows.count Then compareRows = True
 
     Dim compareColumns As Boolean
     compareColumns = False
-    If rangeA.Columns.Count = rangeB.Columns.Count Then compareColumns = True
+    If rangeA.Columns.count = rangeB.Columns.count Then compareColumns = True
     
     If compareRow And compareColumns Then
         compareSize = True
@@ -405,7 +464,7 @@ End Function _
 Function copySheet(fromWS As Worksheet, toWB As Workbook)
 
     With toWB.Worksheets
-    fromWS.Copy after:=.Item(.Count)
+    fromWS.Copy after:=.Item(.count)
     End With
 
 End Function _
@@ -470,14 +529,14 @@ End Function _
 '   @return  [Collection]サブファイルのパス一覧
 '*/
 
-Function getListSubFilePath(ByVal vFolderPath As String) As Collection
+Function getListFilesInFolder(ByVal vFolderPath As String) As Collection
 
     Dim list As Collection
     Set list = New Collection
     
     With CreateObject("Scripting.FileSystemObject")
-        For Each f In .GetFolder(vFolderPath).Files
-            list.Add f.Path
+        For Each f In .getFolder(vFolderPath).Files
+            list.Add f.path
         Next f
     End With
     
@@ -494,17 +553,19 @@ End Function _
 '   @return  [Collection]サブフォルダのパス一覧
 '*/
 
-Function getListSubFolderPath(ByVal vFolderPath As String) As Collection
+Function getListFoldersInFolder(ByVal vFolderPath As String) As Collection
 
     Dim list As Collection
     Set list = New Collection
     
     With CreateObject("Scripting.FileSystemObject")
-        For Each f In .GetFolder(vFolderPath).SubFolders
-            list.Add f.Path
+        For Each f In .getFolder(vFolderPath).SubFolders
+            list.Add f.path
         Next f
     End With
     
     Set SubFolderList = list
 
 End Function _
+
+
