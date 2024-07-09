@@ -1,0 +1,42 @@
+Option Explicit
+
+Private m_len As Long '実際の文字列の長さ
+Private m_bufLen As Long 'バッファーの長さ
+Private m_buffer As String 'バッファー
+Private m_bufPos As Long 'バッファーの書き込み位置
+
+Public Function ToString() As String
+    ToString = Left$(m_buffer, m_bufPos)
+End Function _
+
+
+Private Sub Class_Initialize()
+    m_len = 0
+    m_bufLen = 0
+    m_bufPos = 0
+End Sub _
+
+
+Public Sub AppendLine(app As String)
+    Append app & vbCrLf
+End Sub _
+
+
+Public Sub Append(app As String)
+    Dim appLen As Long
+    Dim appBufLen As Long
+
+    appLen = Len(app)
+
+    '-- バッファ管理
+    If (m_bufLen < m_bufPos + appLen) Then
+        appBufLen = (appLen \ 4096) * 4096 + 4096
+        m_bufLen = m_bufLen + appBufLen
+        m_buffer = m_buffer & String(appBufLen, Chr(0))
+    End If
+
+    '-- 文字列挿入
+    Mid$(m_buffer, m_bufPos + 1, appLen) = app
+    m_bufPos = m_bufPos + appLen
+
+End Sub
