@@ -1,0 +1,68 @@
+Declare PtrSafe Sub Sleep Lib "kernel32" (ByVal dwMilliseconds As Long)
+
+Sub TEST_executePs1()
+    
+    Dim myRange As Range
+    Set myRange = ThisWorkbook.Worksheets(1).Range("A1")
+    
+    Dim cmd As obj_StringBuilder
+    Set cmd = New obj_StringBuilder
+    cmd.Append ("Get-ChildItem -path " & ThisWorkbook.Path & " -File")
+    cmd.Append ("|ForEach-object{$_.Name + ',' + [math]::Floor($_.length/1KB) + ',' + $_.LastWriteTime.toString('yyyy-MM-dd')}")
+    
+    Call setHeader(myRange)
+    
+    Dim r As Integer
+    r = 2
+    For Each text In execute_ps1(cmd.ToString)
+    
+        Dim c As Integer
+        c = 1
+        For Each word In Split(text, ",")
+            With myRange.Cells(r, c)
+                .Value = CStr(word)
+            End With
+            c = c + 1
+        Next word
+        
+        r = r + 1
+    Next text
+    
+    Range(myRange.Cells(1, 1), myRange.Cells(1, 3)).EntireColumn.AutoFit
+
+End Sub _
+
+
+Private Function execute_ps1(cmd As String) As Collection
+
+    Dim result As Object
+    Set result = CreateObject("WScript.Shell").Exec("powershell -NoLogo -ExecutionPolicy RemoteSigned -Command " & cmd)
+    
+    Do While result.Status = 0
+        Sleep 100
+    Loop
+    
+    Dim list As Collection
+    Set list = New Collection
+    
+    Do While result.StdOut.AtEndOfStream <> True
+        list.Add result.StdOut.ReadLine
+    Loop
+    
+    Set execute_ps1 = list
+ 
+End Function _
+
+
+Private Function setHeader(myRange As Range)
+
+    With myRange
+        .Cells(1, 1).Value = "ファイル名"
+        .Cells(1, 2).Interior.Color = RGB(191, 191, 191)
+        .Cells(1, 2).Value = "サイズ(KB)"
+        .Cells(1, 1).Interior.Color = RGB(191, 191, 191)
+        .Cells(1, 3).Value = "最終更新日"
+        .Cells(1, 3).Interior.Color = RGB(191, 191, 191)
+    End With
+
+End Function
