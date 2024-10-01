@@ -1,0 +1,78 @@
+Option Explicit
+
+Private Const OBJECT_NAME As String = "ReaderCollection"
+
+Private collectionArray() As String
+Private rangeSize As Long
+Private Count_ As Long
+
+
+'要素の追加'
+Public Sub Add(addItem As String)
+
+    Count_ = Count_ + 1
+    If Count_ > UBound(collectionArray) Then
+        ReDim Preserve collectionArray(1 To Count_ + rangeSize)
+    End If
+    collectionArray(Count_) = addItem
+
+End Sub
+
+
+'要素の取得'
+Public Function Item(index As Long) As String
+
+    Item = collectionArray(index)
+
+End Function
+
+
+'要素の値更新 (Collectionにはないが、あったら便利かと思って実装)'
+Public Sub Update(index As Long, updateItem As String)
+
+    collectionArray(index) = updateItem
+
+End Sub
+
+
+'要素数を返却'
+Public Property Get Count() As Long
+
+    Count = Count_
+
+End Property
+
+
+'コンストラクタ'
+Private Sub Class_Initialize()
+
+    Call Clear
+
+End Sub
+
+
+'指定要素数で初期化'
+Public Sub Clear(Optional rangeSize_ As Long = 1024)
+
+    rangeSize = rangeSize_
+    ReDim collectionArray(1 To rangeSize)
+    Count_ = 0
+
+End Sub
+
+
+'配列の返却'
+Public Function ToArray() As String()
+
+    ReDim Preserve collectionArray(1 To Count_)
+    ToArray = collectionArray
+
+End Function
+
+
+'コレクション内を文字列として取得 (ログ出力用)'
+Public Function ToString() As String
+
+    ToString = "(" & OBJECT_NAME & ")[""" & Join(Me.ToArray(), """,""") & """]"
+
+End Function
