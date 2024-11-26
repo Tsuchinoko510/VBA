@@ -570,7 +570,7 @@ End Function _
 
 
 
-Private Function findLogFileMulti() As Collection
+Private Function findFileMulti() As Collection
 
     Dim fileList As Collection: Set fileList = New Collection
 
@@ -606,21 +606,14 @@ Function convertIntoTextToList(ByVal textPath As String, ByRef list As Collectio
         .Charset = "utf-8"
         .lineSeparator = -1
         .Open
-        .LoadFromFile filePath
+        .LoadFromFile textPath
 
         Dim row As Long: row = 1
         
         Do Until .EOS
             Dim text() As String: text() = Split(.readText(-2), ",")
             
-            Dim obj As ObjectDB073
-            Set obj = New ObjectDB073
-            obj.setFileName = Dir(filePath)
-            obj.setRow = row
-            obj.set添付先受付番号 = text(0)
-            obj.set添付データ同時送信有無フラグ = text(1)
-            obj.set添付ファイル数 = text(2)
-            obj.set受付番号YYYYMM = text(3)
+            Dim obj As Object
             
             Call list.Add(obj)
             row = row + 1
