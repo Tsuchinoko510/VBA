@@ -569,3 +569,33 @@ Function getListFoldersInFolder(ByVal vFolderPath As String) As Collection
 End Function _
 
 
+
+Private Function findLogFileMulti() As Collection
+
+    Dim fileList As Collection: Set fileList = New Collection
+
+'ログファイル選択ウインドウの表示
+    With Application.FileDialog(msoFileDialogFilePicker)
+        .Filters.Clear
+        .Filters.Add "全てのファイル", "*.*"
+        .InitialFileName = ThisWorkbook.path
+        .AllowMultiSelect = True
+        .Title = "Logファイルを選択して下さい（複数可）"
+        
+        If Not .Show Then
+        'ファイルが選択されなかった場合にマクロを終了する
+            MsgBox "ファイルが選択されなかった為,処理を終了します": End
+        End If
+        
+'選択されたファイルのパス一覧を作成
+        Dim logPath
+        For Each logPath In .SelectedItems
+            Call fileList.Add(logPath)
+        Next logPath
+    End With
+
+    Set findLogFile = fileList  '@return
+    
+End Function _
+
+
