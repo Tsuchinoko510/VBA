@@ -5,12 +5,10 @@
 Function macroStart()
 
     With Application
-    
         .Calculation = xlCalculationManual  '自動計算OFF
         .ScreenUpdating = False             '描画OFF
         .EnableEvents = False               'イベントOFF
-        .Cursor = xlDefault                 'カーソルOFF
-    
+        .Cursor = xlWait                 'カーソルOFF
     End With
 
 End Function _
@@ -23,12 +21,10 @@ End Function _
 Function macroEnd()
 
     With Application
-    
-        .Cursor = xlDefault                 'カーソルOFF
-        .EnableEvents = False               'イベントOFF
-        .ScreenUpdating = False             '描画OFF
-        .Calculation = xlCalculationManual  '自動計算OFF
-    
+        .Calculation = xlCalculationAutomatic   '自動計算ON
+        .ScreenUpdating = True             '描画ON
+        .EnableEvents = True               'イベントON
+        .Cursor = xlDefault                 'カーソルON
     End With
 
 End Function _
