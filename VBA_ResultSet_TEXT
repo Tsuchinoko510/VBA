@@ -1,0 +1,31 @@
+Sub sample()
+
+    Dim con As Object: Set con = CreateObject("ADODB.Connection")
+    With con
+        .Provider = "Microsoft.ACE.OLEDB.12.0"
+        .Properties("Extended Properties") = "Text; HDR=Yes; CharacterSet=65001;"
+        .Open ThisWorkbook.Path & "\"
+    End With
+    
+    Dim strSQL As String
+    strSQL = "SELECT * FROM [TestTable.txt] WHERE 区分 = '野菜'"
+    
+    Dim rs As Object: Set rs = CreateObject("ADODB.RecordSet")
+    Set rs = con.Execute(strSQL)
+    
+    'Dim col As Long
+    'For col = 0 To rs.Fields.Count - 1
+    '    Debug.Print rs.Fields(col).Name
+    'Next col
+    
+    Do While Not rs.EOF
+        Debug.Print rs("品名") & "," & rs("区分") & "," & rs("単価") & "," & rs("購入数") & "," & rs("購入日")
+        rs.MoveNext
+    Loop
+    
+    con.Close
+    Set rs = Nothing
+    Set con = Nothing
+
+End Sub
+
