@@ -20,15 +20,17 @@ Sub sample()
     End With
     
     Dim strSQL As String
-    strSQL = "SELECT * FROM [TestTable.txt] WHERE 区分 = '野菜'"
+    strSQL = "SELECT [品名], [区分], '', [単価], [購入数], '', [購入日] FROM [TestTable.txt] WHERE 区分 = '野菜'"
     
     Dim rs As Object: Set rs = CreateObject("ADODB.RecordSet")
     Set rs = con.Execute(strSQL)
     
-    'Dim col As Long
-    'For col = 0 To rs.Fields.Count - 1
-    '    Debug.Print rs.Fields(col).Name
-    'Next col
+    Dim col As Long
+    For col = 0 To rs.Fields.Count - 1
+        Debug.Print rs.Fields(col).Name & " / " & rs.Fields(col).Type
+    Next col
+    
+    Worksheets(1).Range("A1").CopyFromRecordset Data:=rs
     
     Do While Not rs.EOF
         Debug.Print rs("品名") & "," & rs("区分") & "," & rs("単価") & "," & rs("購入数") & "," & rs("購入日")
@@ -40,7 +42,6 @@ Sub sample()
     Set con = Nothing
 
 End Sub
-
 
 
 ■■■VBA(ローカル使用)■■■
