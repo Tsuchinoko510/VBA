@@ -44,6 +44,8 @@ Sub sample()
 
 End Sub
 
+
+
 ■■■VBA(ローカル使用)■■■
 Public Sub TEST()
 
@@ -80,3 +82,31 @@ Public Sub TEST()
 
 End Sub
 
+
+■■■VBA(Excelシート)■■■
+Private Sub sample()
+
+    Dim con As Object: Set con = CreateObject("ADODB.Connection")
+    With con
+        .Provider = "Microsoft.ACE.OLEDB.12.0"
+        .Properties("Extended Properties") = "Excel 12.0"
+        .Open ThisWorkbook.FullName
+    End With
+    
+    Dim strSQL As String
+    strSQL = "SELECT * FROM [EXCEL_Sheet$] WHERE 単価 = (SELECT MAX(単価) FROM [EXCEL_Sheet$] WHERE 区分 = '野菜')"
+    
+    Dim rs As Object: Set rs = CreateObject("ADODB.RecordSet")
+    Set rs = con.Execute(strSQL)
+    
+    rs.moveFirst
+    Do Until rs.EOF
+        'Debug.Print rs!Result
+        Debug.Print rs!品名 & " / " & rs!単価
+        rs.moveNext
+    Loop
+    
+    rs.Close: Set rs = Nothing
+    con.Close: Set con = Nothing
+    
+End Sub
