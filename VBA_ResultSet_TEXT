@@ -41,3 +41,39 @@ Sub sample()
 
 End Sub
 
+■■■VBA(ローカル使用)■■■
+Public Sub TEST()
+
+    Dim rs As Object: Set rs = CreateObject("ADODB.RecordSet")
+    
+    rs.Fields.Append "adBSTR", 8
+    rs.Fields.Append "adInteger", 3
+    rs.Fields.Append "adCurrency", 6
+    rs.Fields.Append "adDate", 7
+    rs.Fields.Append "adDBDate", 133
+    rs.Fields.Append "adDBTime", 134
+    
+    rs.Open
+    With rs
+        .addNew
+        
+        !adBSTR = "Hello, World"
+        !adCurrency = 30000000
+        !adDate = "2025/1/1"
+        !adDBDate = "2025/1/1"
+        !adDBTime = "10:11"
+        !adInteger = 50000
+        
+        .Update
+    End With
+    
+    rs.moveFirst
+    Debug.Print rs("adBSTR")
+    Debug.Print rs("adCurrency")
+    Debug.Print rs("adDate")
+    Debug.Print rs("adDBDate")
+    Debug.Print rs("adDBTime")
+    Debug.Print rs("adInteger")
+
+End Sub
+
