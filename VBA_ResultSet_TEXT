@@ -101,7 +101,6 @@ Private Sub sample()
     
     rs.moveFirst
     Do Until rs.EOF
-        'Debug.Print rs!Result
         Debug.Print rs!品名 & " / " & rs!単価
         rs.moveNext
     Loop
