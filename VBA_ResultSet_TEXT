@@ -32,6 +32,7 @@ Sub sample()
     
     Worksheets(1).Range("A1").CopyFromRecordset Data:=rs
     
+    rs.moveFirst
     Do While Not rs.EOF
         Debug.Print rs("品名") & "," & rs("区分") & "," & rs("単価") & "," & rs("購入数") & "," & rs("購入日")
         rs.MoveNext
@@ -42,7 +43,6 @@ Sub sample()
     Set con = Nothing
 
 End Sub
-
 
 ■■■VBA(ローカル使用)■■■
 Public Sub TEST()
