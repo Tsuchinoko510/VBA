@@ -620,3 +620,29 @@ Function convertIntoTextToList(ByVal textPath As String, ByRef list As Collectio
     End With
     
 End Function _
+
+
+Private Function UTF8(ByVal inFilePath As String, ByVal inText As String)
+
+    With CreateObject("ADODB.Stream")
+        .Charset = "utf-8"      '--> 文字コード/ "utf-8" (UTF-8) , "shift-jis" (Shift-JIS) , "ANSI_X3.4-1986" (ANSI)
+        .lineSeparator = -1     '--> 改行コード/ 13 (CR), -1 (CRLF) , 10 (LF)
+        .Type = 2               '--> 1 (バイナリデータ), 2 (テキストデータ[規定値])
+        .Open
+        .writeText inText
+        .SaveToFile (inFilePath), 2 '上書き保存
+        .Position = 3
+        
+            Dim ado As Object: Set ado = CreateObject("ADODB.Stream")
+            ado.Type = 1
+            ado.Open
+            
+        .CopyTo ado
+            
+            ado.SaveToFile inFilePath, 2
+            ado.Close
+            
+        .Close
+    End With
+
+End Function
