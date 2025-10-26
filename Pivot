@@ -1,0 +1,126 @@
+Option Explicit
+
+' 元データの項目
+Enum items
+    customer_id = 0
+    customer_name = 1
+    registration_date
+    customer_name_kana
+    Email
+    gender
+    age
+    birth
+    pref
+    
+    firstCol = customer_id
+    lastCol = pref
+End Enum
+
+Public Sub setTable()
+    
+    ' 最終行の取得
+    Dim lastRow As Integer
+    lastRow = Sheet1.Range("A1").End(xlDown).Row
+    
+    ' 範囲の配列化
+    Dim arr
+    With Sheet1.Range("A1")
+        arr = Range(.Cells(1, 1), .Cells(lastRow, items.lastCol)).value
+    End With
+    
+    ' 各シート初期化処理
+    Sheet2.Cells.Clear
+    Sheet3.Cells.Clear
+    Sheet4.Cells.Clear
+
+    With Sheet2.Range("A1")
+        ' 配列をシートへ転記
+        .Range(.Cells(1, 1), .Cells(lastRow, items.lastCol)).value = arr
+        ' 転記範囲のテーブル化
+        Call Sheet2.ListObjects.Add(SourceType:=xlSrcRange, Source:=.CurrentRegion, TableStyleName:="TableStyleLight2")
+        ' xlSrcExternal [0] 外部データベース
+        ' xlSrcModel [4] PowerPivotモデル
+        ' xlSrcQuery [3] クエリ
+        ' xlSrcRange [1] 範囲
+        ' xlSrcXml [2] XML
+    End With
+    
+    ' テーブルプロパティ
+    With Sheet2.ListObjects(1)
+        .Name = "testTable" ' テーブル名称
+        .ListColumns("registration_date").Range.NumberFormatLocal = "yyyy/mm/dd hh:mm"  ' 表示形式設定
+        .ListColumns("birth").Range.NumberFormatLocal = "yyyy/mm/dd"    ' 表示形式設定
+    End With
+    
+    ' PivotTableに使用するキャッシュデータの作成
+    Dim pivotCashes As Object
+    Set pivotCashes = ThisWorkbook.PivotCaches.Create(xlDatabase, Sheet2.ListObjects("testTable"))
+    
+    ' PivotTableの作成
+    Call pivotCashes.CreatePivotTable(Sheet3.Range("D1"), TableName:="testPivot")
+    
+    With Sheet3.PivotTables("testPivot")
+        .PivotFields("age").Orientation = xlRowField    ' 行フィールド
+        .PivotFields("age").DataRange.Cells(1, 1).Group Start:=0, End:=100, By:=10  ' 0~100歳の間を10歳ずつにグループ化
+        .PivotFields("registration_date").Orientation = xlColumnField   ' 列フィールド
+        ' 購入日をグループ化 --> Start:開始日, End:終了日, Array(秒, 分, 時, 日, 月, 四半期, 年)
+        .PivotFields("registration_date").DataRange.Cells(1, 1).Group Start:=True, End:=True, Periods:=Array(False, False, False, False, True, True, True)
+        .PivotFields("gender").Orientation = xlPageField    ' フィルターフィールド
+    End With
+    
+    With Sheet3.PivotTables("testPivot").PivotFields("customer_id")
+        .Orientation = xlDataField  ' 値フィールド
+        .Function = xlCount ' 個数カウント
+    End With
+    
+    ' スライサーに使用するキャッシュデータの作成
+    With ThisWorkbook.SlicerCaches
+        ' スライサーを作成する範囲を宣言
+        Dim slicerRng As Range
+        ' スライサー１の作成
+        Dim slicer1 As Object: Set slicerRng = Sheet3.Range("A1:C10")
+        Set slicer1 = .Add(Sheet3.PivotTables("testPivot"), "gender").Slicers.Add(Sheet3, _
+                Top:=slicerRng.Top, Left:=slicerRng.Left, Width:=slicerRng.Width, Height:=slicerRng.Height)
+        ' スライサー２の作成
+        Dim slicer2 As Object: Set slicerRng = Sheet3.Range("A11:C20")
+        Set slicer2 = .Add(Sheet3.PivotTables("testPivot"), "customer_name").Slicers.Add(Sheet3, _
+                Top:=slicerRng.Top, Left:=slicerRng.Left, Width:=slicerRng.Width, Height:=slicerRng.Height)
+    End With
+
+    ' ピボットテーブルのラベル取得
+    Dim elem As Variant
+    For Each elem In Sheet3.PivotTables("testPivot").PivotFields("age").PivotItems
+        Debug.Print elem.value
+    Next elem
+    
+    ' 個別の値取得
+    Debug.Print "20代の1月来店数：" & Sheet3.PivotTables("testPivot").GetData("20-29 1月")
+    Debug.Print "20代の来店数総計：" & Sheet3.PivotTables("testPivot").GetData("20-29")
+    Debug.Print "1月の来店数総計：" & Sheet3.PivotTables("testPivot").GetData("1月")
+    
+    ' グラフ範囲の宣言
+    Dim graphRng As Range: Set graphRng = Sheet4.Range("A1:N30")
+    ' ピボットグラフを作成
+    Dim objShapes As Object
+    Set objShapes = Sheet4.Shapes.AddChart2(, xlPie, _
+                Top:=graphRng.Top, Left:=graphRng.Left, Width:=graphRng.Width, Height:=graphRng.Height _
+                )
+                ' xlColumnClustered [51] 集合縦棒
+                ' xlbarclustered [57] 集合横棒
+                ' xlpie [5] 円グラフ
+    With objShapes
+        .Name = "testGraph" ' グラフの名称
+        .Chart.ApplyLayout 5
+        .Chart.SetSourceData Sheet3.PivotTables("testPivot").DataBodyRange  ' グラフの参照データ範囲
+        .Chart.PivotLayout.PivotTable.PivotFields("gender").PivotItems("F").Visible = True
+        .Fill.ForeColor.RGB = RGB(150, 150, 150)    ' 背景色
+        .Line.DashStyle = msoLineDashDot
+    End With
+    
+    ' グラフへのスライサー作成
+    With Sheet4.Range("O1:Q11")
+        ThisWorkbook.SlicerCaches.Add2(Sheet3.PivotTables("testPivot"), "四半期 (registration_date)") _
+            .Slicers.Add Sheet4, Top:=.Top, Left:=.Left, Width:=.Width, Height:=.Height
+    End With
+
+End Sub
