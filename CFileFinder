@@ -1,0 +1,474 @@
+Option Explicit
+
+' ==========================================================
+' クラスモジュール名: CFileFinder (API完全統合版)
+' 目的: Unicode APIによる高速・確実なファイル検索、存在確認、詳細情報取得を行う。
+' ==========================================================
+
+' --- 1. APIの宣言と構造体 ---
+
+' ファイル検索を最初に開始するAPI (WideChar/Unicode版)
+Private Declare PtrSafe Function FindFirstFile Lib "kernel32" Alias "FindFirstFileW" ( _
+        ByVal lpFileName As LongPtr, lpFindFileData As WIN32_FIND_DATA) As LongPtr
+' 次のファイル/フォルダを検索するAPI
+Private Declare PtrSafe Function FindNextFile Lib "kernel32" Alias "FindNextFileW" ( _
+        ByVal hFindFile As LongPtr, lpFindFileData As WIN32_FIND_DATA) As Long
+' 検索ハンドルを閉じるAPI
+Private Declare PtrSafe Function FindClose Lib "kernel32" ( _
+        ByVal hFindFile As LongPtr) As LongPtr
+' エラーコードを取得するAPI
+Private Declare PtrSafe Function GetLastError Lib "kernel32" () As Long
+' ファイルまたはフォルダの属性を取得するAPI (存在確認や属性詳細情報取得に使用)
+Private Declare PtrSafe Function GetFileAttributes Lib "kernel32" Alias "GetFileAttributesW" ( _
+        ByVal lpFileName As LongPtr) As Long
+
+' API定数
+Private Const INVALID_HANDLE_VALUE As LongPtr = -1    ' 検索失敗時のハンドル値
+Private Const INVALID_FILE_ATTRIBUTES As Long = &HFFFFFFFF ' 属性取得失敗時の戻り値
+Private Const FILE_ATTRIBUTE_DIRECTORY As Long = &H10 ' 検索結果がディレクトリであるか判別する属性値
+' APIエラーコード（エラーハンドリング用）
+Private Const ERROR_NO_MORE_FILES As Long = 18            ' 次のファイルがない（FindNextFileの終了条件）
+Private Const ERROR_FILE_NOT_FOUND As Long = 2            ' ファイルが見つからない
+Private Const ERROR_PATH_NOT_FOUND As Long = 3            ' パスが見つからない
+Private Const ERROR_ACCESS_DENIED As Long = 5             ' アクセスが拒否された
+
+' Windowsが使用するファイルの時間情報構造体
+Private Type FILETIME
+        dwLowDateTime As Long                                                     ' ファイル時間の下位32ビット
+        dwHighDateTime As Long                                                    ' ファイル時間の上位32ビット
+End Type
+
+' API検索結果格納用の構造体（WIN32_FIND_DATAWに相当）
+Private Type WIN32_FIND_DATA
+        dwFileAttributes As Long                                                ' ファイル属性 (GetFileInfoの属性値として使用)
+        ftCreationTime As FILETIME                                            ' 作成時刻
+        ftLastAccessTime As FILETIME                                        ' 最終アクセス時刻
+        ftLastWriteTime As FILETIME                                         ' 最終更新時刻 (結果表示に使用)
+        nFileSizeHigh As Long                                                     ' ファイルサイズの上位32ビット
+        nFileSizeLow As Long                                                        ' ファイルサイズの下位32ビット
+        dwReserved0 As Long                                                         ' 予約
+        dwReserved1 As Long                                                         ' 予約
+        cFileName(0 To 519) As Byte                                         ' ファイル名 (Unicode: 260文字 * 2バイト)
+        cAlternateFileName(0 To 27) As Byte                         ' ショートファイル名 (Unicode: 14文字 * 2バイト)
+End Type
+
+' 検索結果を格納するための内部構造体
+Private Type TSearchResult
+        folderPath As String                                                        ' ファイルまたはフォルダの親フォルダパス
+        Name As String                                                                    ' ファイルまたはフォルダ名
+        isFolder As Boolean                                                         ' フォルダかどうか (True: フォルダ, False: ファイル)
+        sizeKB As Long                                                                    ' ファイルサイズ (キロバイト単位)
+        lastModified As Variant                                                 ' 最終更新日時 (Date型またはNull)
+End Type
+
+' 再帰検索に使用するフォルダのパスを格納するスタック構造体（Collectionより高速）
+Private Type TFolderStack
+        Paths() As String                                                             ' フォルダパスの配列
+        Count As Long                                                                     ' 現在スタックに積まれているパスの数
+        Capacity As Long                                                                ' Paths配列の現在の最大要素数
+End Type
+
+' --- 2. クラス変数 ---
+
+Private m_Results() As TSearchResult                                ' 検索結果の格納配列
+Private m_ResultCount As Long                                             ' 検索結果の総数
+Private m_IsRecursive As Boolean                                        ' 再帰検索を行うかどうかのフラグ
+Private m_IncludeFolders As Boolean                                 ' 検索結果にフォルダを含めるかどうかのフラグ
+Private m_IncludeFiles As Boolean                                     ' 検索結果にファイルを含めるかどうかのフラグ
+Private m_LastError As String                                             ' 検索中に発生した最終エラーメッセージ
+
+' --- 3. Public インターフェース (公開メソッド/プロパティ) ---
+
+' ==========================================================
+' フォルダの存在確認 (API: GetFileAttributesW)
+' 引数: path (String): チェック対象のフォルダパス
+' 戻り値: 存在すれば True
+' ==========================================================
+Public Function IsDirectoryExists(ByVal path As String) As Boolean
+        IsDirectoryExists = GetFileAttributesAPI_Internal(path, True)
+End Function
+
+' ==========================================================
+' ファイルの存在確認 (API: GetFileAttributesW)
+' 引数: path (String): チェック対象のファイルパス
+' 戻り値: 存在すれば True
+' ==========================================================
+Public Function IsFileExists(ByVal path As String) As Boolean
+        IsFileExists = GetFileAttributesAPI_Internal(path, False)
+End Function
+
+' ==========================================================
+' ファイルの詳細情報（サイズ、日時、属性）を取得 (API: FindFirstFileW)
+' 戻り値: Variant(0 To 6) の1次元配列として情報を返す
+' 要素: [0]:Exists, [1]:IsFolder, [2]:Attributes, [3]:SizeKB, [4]:LastModified, [5]:ErrorMessage, [6]:SizeB(CDec)
+' ==========================================================
+Public Function GetFileInfo(ByVal filePath As String) As Variant
+        Dim data As WIN32_FIND_DATA
+        Dim hFile As LongPtr
+        Dim lastErr As Long
+        Dim info(0 To 6) As Variant ' 戻り値配列
+    
+        ' 初期化
+        info(0) = False ' Exists
+        info(5) = ""        ' ErrorMessage
+    
+        ' FindFirstFile 実行 (ファイル/フォルダの情報を1件取得)
+        hFile = FindFirstFile(ByVal StrPtr(filePath), data)
+    
+        If hFile = INVALID_HANDLE_VALUE Then
+                lastErr = GetLastError()
+                info(5) = "APIエラー " & lastErr
+                GoTo ExitFunction
+        End If
+    
+        ' 情報の格納
+        info(0) = True ' Exists
+        info(2) = data.dwFileAttributes ' Attributes (インデックス2)
+        info(1) = (data.dwFileAttributes And FILE_ATTRIBUTE_DIRECTORY) <> 0 ' IsFolder
+    
+        If info(1) = False Then ' ファイルの場合のみサイズと日時を取得
+                ' サイズを計算 (64bit値を格納)
+                Dim sizeB As Variant
+                sizeB = CDec(data.nFileSizeHigh) * 4294967296# + data.nFileSizeLow
+                info(6) = sizeB                                                                 ' SizeB (インデックス6)
+                info(3) = CLng((CDec(sizeB) + 1023) \ 1024)         ' SizeKB (インデックス3)
+                ' 最終更新日時を取得
+                info(4) = FileTimeToDate(data.ftLastWriteTime)    ' LastModified (インデックス4)
+        Else ' フォルダの場合、サイズと日時を空にする
+                info(6) = 0
+                info(3) = 0
+                info(4) = Null
+        End If
+    
+        ' FindCloseでハンドルを閉じる
+        Call FindClose(hFile)
+    
+ExitFunction:
+        GetFileInfo = info
+End Function
+
+' ==========================================================
+' ファイル検索を開始します。
+' ==========================================================
+Public Sub StartSearch( _
+        ByVal rootPath As String, _
+        Optional ByVal isRecursive As Boolean = True, _
+        Optional ByVal includeFolders As Boolean = True, _
+        Optional ByVal includeFiles As Boolean = True)
+    
+        On Error GoTo ErrorHandler
+    
+        ' 初期化
+        m_ResultCount = 0
+        m_LastError = ""
+        ReDim m_Results(1 To 1000)
+        m_IsRecursive = isRecursive
+        m_IncludeFolders = includeFolders
+        m_IncludeFiles = includeFiles
+    
+        ' パスの正規化
+        rootPath = Trim$(rootPath)
+        If rootPath = "" Then
+                m_LastError = "パスが空です"
+                Exit Sub
+        End If
+    
+        Do While Right$(rootPath, 1) = "\"
+                rootPath = Left$(rootPath, Len(rootPath) - 1)
+        Loop
+        rootPath = rootPath & "\"
+    
+        ' 検索実行 (Private関数を呼び出す)
+        Call IterativeSearch(rootPath)
+    
+        Exit Sub
+    
+ErrorHandler:
+        m_LastError = "StartSearch エラー: " & Err.Description
+End Sub
+
+' ==========================================================
+' 検索結果を2次元のVariant配列として返します。
+' 戻り値: 検索結果を含むVariant配列 (5列: フォルダパス, 名前, 種類, サイズKB, 更新日時)
+' ==========================================================
+Public Property Get Results() As Variant
+        Dim outputArray() As Variant
+        Dim i As Long
+    
+        If m_ResultCount = 0 Then
+                ' 結果がない場合、エラー値を格納した配列を返す (空の配列は不可のため)
+                ReDim outputArray(1 To 1, 1 To 5)
+                outputArray(1, 1) = CVErr(xlErrValue)
+        Else
+                ' 結果を2次元Variant配列に詰め替える
+                ReDim outputArray(1 To m_ResultCount, 1 To 5)
+                For i = 1 To m_ResultCount
+                        outputArray(i, 1) = m_Results(i).folderPath
+                        outputArray(i, 2) = m_Results(i).Name
+                        outputArray(i, 3) = m_Results(i).isFolder
+                        outputArray(i, 4) = m_Results(i).sizeKB
+                        outputArray(i, 5) = m_Results(i).lastModified
+                Next i
+        End If
+        Results = outputArray
+End Property
+
+' ==========================================================
+' 検索結果の総件数を返します。
+' ==========================================================
+Public Property Get Count() As Long
+        Count = m_ResultCount
+End Property
+
+' ==========================================================
+' 検索中に発生した最終エラーメッセージを返します。
+' ==========================================================
+Public Property Get LastError() As String
+        LastError = m_LastError
+End Property
+
+' --- 4. Private ユーティリティ関数 ---
+
+' ==========================================================
+' APIによるファイル/フォルダの存在確認ロジック（内部関数）
+' GetFileAttributesWを使用して、存在と種類（ファイル/フォルダ）を判定する。
+' ==========================================================
+Private Function GetFileAttributesAPI_Internal(ByVal path As String, ByVal checkFolder As Boolean) As Boolean
+    
+        ' 末尾のバックスラッシュを削除 (GetFileAttributesWの仕様に合わせる)
+        Do While Right$(path, 1) = "\"
+                path = Left$(path, Len(path) - 1)
+        Loop
+    
+        Dim fileAttributes As Long
+        fileAttributes = GetFileAttributes(ByVal StrPtr(path)) ' API呼び出し
+    
+        If fileAttributes = INVALID_FILE_ATTRIBUTES Then
+                GetFileAttributesAPI_Internal = False
+                Exit Function
+        End If
+    
+        ' 属性からフォルダかどうかを判定
+        Dim isDirectory As Boolean
+        isDirectory = (fileAttributes And FILE_ATTRIBUTE_DIRECTORY) <> 0
+    
+        If checkFolder Then
+                ' フォルダチェックの場合、フォルダならTrue
+                GetFileAttributesAPI_Internal = isDirectory
+        Else
+                ' ファイルチェックの場合、フォルダでなければTrue
+                GetFileAttributesAPI_Internal = Not isDirectory
+        End If
+End Function
+
+' ==========================================================
+' WIN32 APIのFILETIME構造体をExcelの日付/時刻 (Date/Double) に変換します。
+' ==========================================================
+Private Function FileTimeToDate(ByRef ft As FILETIME) As Variant
+        On Error GoTo ErrorHandler
+    
+        If ft.dwHighDateTime = 0 And ft.dwLowDateTime = 0 Then
+                FileTimeToDate = Null ' 0は無効な時刻としてNullを返す
+                Exit Function
+        End If
+    
+        ' FILETIME は 1601年1月1日からの100ナノ秒単位
+        ' 64ビット整数値に変換：FILETIMEの64ビット値を格納 (Decimal型を使用)
+        Dim fileTime64 As Variant
+        fileTime64 = CDec(ft.dwHighDateTime) * 4294967296# + CDec(ft.dwLowDateTime)
+    
+        ' 100ナノ秒単位を日数に変換
+        Dim days As Double
+        days = fileTime64 / 864000000000#
+    
+        ' 1601年1月1日から1899年12月30日(Excel基準日)までの日数を引く
+        Dim excelDate As Double
+        excelDate = days - 109205#
+    
+        ' 有効な日付範囲チェック
+        If excelDate < 1 Or excelDate > 2958465 Then
+                FileTimeToDate = Null
+        Else
+                FileTimeToDate = CDate(excelDate)
+        End If
+        Exit Function
+    
+ErrorHandler:
+        Debug.Print "FileTimeToDate エラー: " & Err.Description
+        FileTimeToDate = Null
+End Function
+
+' ==========================================================
+' 検索結果 (1件) を内部配列 m_Results に追加します。
+' 配列のキャパシティが不足している場合は拡張します。
+' ==========================================================
+Private Sub AddResult(ByVal folderPath As String, ByVal Name As String, _
+                                            ByVal isFolder As Boolean, ByVal sizeKB As Long, _
+                                            ByVal lastModified As Variant)
+        m_ResultCount = m_ResultCount + 1
+
+        ' 配列のリサイズ（1000件ずつ拡張）
+        If m_ResultCount > UBound(m_Results) Then
+                ReDim Preserve m_Results(1 To m_ResultCount + 1000)
+        End If
+
+        With m_Results(m_ResultCount)
+                ' 各フィールドに結果を格納
+                .folderPath = folderPath
+                .Name = Name
+                .isFolder = isFolder
+                .sizeKB = sizeKB
+                .lastModified = lastModified
+        End With
+End Sub
+
+' ==========================================================
+' WIN32_FIND_DATA内のByte配列からNull終端のファイル名をStringとして取り出します。
+' ==========================================================
+Private Function GetFileNameFromBytes(ByRef byteArray() As Byte) As String
+        Dim tempStr As String                                                     ' Byte配列を文字列として一時的に格納
+        tempStr = byteArray
+
+        ' Null文字で切り取り
+        Dim nullPos As Long
+        nullPos = InStr(tempStr, vbNullChar)
+        If nullPos > 0 Then
+                GetFileNameFromBytes = Left$(tempStr, nullPos - 1)
+        Else
+                GetFileNameFromBytes = tempStr
+        End If
+End Function
+
+' ==========================================================
+' フォルダスタックを初期化します。
+' ==========================================================
+Private Sub InitStack(ByRef stack As TFolderStack)
+        stack.Capacity = 100                                                                ' 初期キャパシティ
+        stack.Count = 0                                                                         ' カウントをリセット
+        ReDim stack.Paths(1 To stack.Capacity)                            ' 配列を初期化
+End Sub
+
+' ==========================================================
+' フォルダパスをスタックに積みます (Push)。
+' ==========================================================
+Private Sub PushStack(ByRef stack As TFolderStack, ByVal folderPath As String)
+        stack.Count = stack.Count + 1
+        If stack.Count > stack.Capacity Then
+                stack.Capacity = stack.Capacity + 100
+                ReDim Preserve stack.Paths(1 To stack.Capacity) ' 配列を拡張
+        End If
+        stack.Paths(stack.Count) = folderPath                             ' パスを格納
+End Sub
+
+' ==========================================================
+' スタックからフォルダパスを取り出します (Pop)。
+' ==========================================================
+Private Function PopStack(ByRef stack As TFolderStack) As String
+        If stack.Count > 0 Then
+                PopStack = stack.Paths(stack.Count)                         ' パスを取得
+                stack.Count = stack.Count - 1                                     ' カウントを減らす
+        Else
+                PopStack = ""                                                                     ' スタックが空の場合は空文字を返す
+        End If
+End Function
+
+' --- 5. Private 検索ロジック（反復関数） ---
+
+' ==========================================================
+' APIを用いたファイル/フォルダの再帰的検索を非再帰（反復）で行います。
+' ==========================================================
+Private Sub IterativeSearch(ByVal rootPath As String)
+        On Error GoTo ErrorHandler
+
+        Dim data As WIN32_FIND_DATA                                                 ' APIから返される検索結果データ
+        Dim hFile As LongPtr                                                                ' FindFirstFile/FindNextFileの検索ハンドル
+        Dim fileName As String                                                            ' 抽出されたファイル/フォルダ名
+        Dim currentPath As String                                                     ' 現在検索中のフォルダパス
+        Dim folderStack As TFolderStack                                         ' 次に探索すべきフォルダを格納するスタック
+        Dim searchPath As String                                                        ' FindFirstFileに渡す検索パターン (例: "C:\Root\*")
+        Dim sizeB As Variant                                                                ' ファイルサイズ (64bit値を格納するためVariant/CDecを想定)
+        Dim sizeKB As Long                                                                    ' ファイルサイズ (KB単位)
+        Dim lastModified As Variant                                                 ' 最終更新日時
+        Dim lastErr As Long                                                                 ' GetLastErrorで取得したエラーコード
+
+        ' スタック初期化
+        Call InitStack(folderStack)
+        Call PushStack(folderStack, rootPath)                             ' ルートパスをスタックに積む
+
+        hFile = INVALID_HANDLE_VALUE                                                ' ハンドルを初期化
+
+        ' スタックが空になるまでループ（非再帰の深さ優先探索）
+        Do While folderStack.Count > 0
+                currentPath = PopStack(folderStack)                         ' スタックから次のフォルダを取り出す
+                searchPath = currentPath & "*"                                    ' 検索パターンを設定
+
+                ' FindFirstFile 実行
+                hFile = FindFirstFile(ByVal StrPtr(searchPath), data)
+
+                If hFile = INVALID_HANDLE_VALUE Then
+                        lastErr = GetLastError()                                        ' エラーコードを取得
+                        Select Case lastErr
+                                Case ERROR_FILE_NOT_FOUND, ERROR_NO_MORE_FILES
+                                ' ファイルが見つからない（空フォルダなど）- 正常と見なす
+                                Case ERROR_PATH_NOT_FOUND
+                                        m_LastError = m_LastError & vbCrLf & "パスが見つかりません: " & currentPath
+                                Case ERROR_ACCESS_DENIED
+                                        m_LastError = m_LastError & vbCrLf & "アクセス拒否: " & currentPath
+                                Case Else ' その他のエラー
+                                        m_LastError = m_LastError & vbCrLf & "FindFirstFile エラー " & lastErr & ": " & currentPath
+                        End Select
+                        GoTo NextFolder
+                End If
+
+                ' ファイル/フォルダを列挙
+                Do
+                        fileName = GetFileNameFromBytes(data.cFileName) ' Byte配列からファイル名を取得
+
+                        If fileName <> "" And fileName <> "." And fileName <> ".." Then
+
+                                ' サイズと日時を計算
+                                sizeB = CDec(data.nFileSizeHigh) * 4294967296# + data.nFileSizeLow
+                                sizeKB = CLng((CDec(sizeB) + 1023) \ 1024)
+                                lastModified = FileTimeToDate(data.ftLastWriteTime)
+                
+                                If (data.dwFileAttributes And FILE_ATTRIBUTE_DIRECTORY) <> 0 Then
+                                        ' フォルダ
+                                        If m_IncludeFolders Then
+                                                ' フォルダの結果を追加 (サイズは0KB)
+                                                Call AddResult(currentPath, fileName, True, 0, lastModified)
+                                        End If
+
+                                        If m_IsRecursive Then
+                                                ' 再帰検索が有効なら、フォルダをスタックに積む
+                                                Call PushStack(folderStack, currentPath & fileName & "\")
+                                        End If
+                                Else
+                                        ' ファイル
+                                        If m_IncludeFiles Then
+                                                ' ファイルの結果を追加
+                                                Call AddResult(currentPath, fileName, False, sizeKB, lastModified)
+                                        End If
+                                End If
+                        End If
+                Loop While FindNextFile(hFile, data) <> 0 ' 次のファイルが見つかるまでループ
+
+                ' ハンドルを閉じる
+                Call FindClose(hFile)
+                hFile = INVALID_HANDLE_VALUE
+
+NextFolder:
+        Loop
+
+        Exit Sub
+
+ErrorHandler:
+        ' エラー時にハンドルが開いたままなら閉じる
+        If hFile <> INVALID_HANDLE_VALUE Then
+                Call FindClose(hFile)
+        End If
+        m_LastError = m_LastError & vbCrLf & "IterativeSearch 致命的エラー: " & Err.Description & " (パス: " & currentPath & ")"
+End Sub
+
+
+
+
