@@ -646,3 +646,6 @@ Private Function UTF8(ByVal inFilePath As String, ByVal inText As String)
     End With
 
 End Function
+
+最終行取得(空白ありの場合)
+debug.print UBound(ws.UsedRange.Value)
